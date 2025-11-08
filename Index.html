@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>След - Детективная игра</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Экран загрузки */
+        #loadingScreen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+        }
+        
+        .loading-content h2 {
+            margin: 20px 0 10px;
+            font-size: 1.5em;
+        }
+        
+        .loading-content p {
+            opacity: 0.8;
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Шапка игры */
+        .game-header {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .rank-badge {
+            background: linear-gradient(45deg, #e67e22, #f39c12);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 10px;
+        }
+        
+        .stat-icon {
+            font-size: 1.1em;
+        }
+        
+        /* Основная область игры */
+        .game-main {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* Карта офиса */
+        .office-map {
+            margin-bottom: 20px;
+        }
+        
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .room {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .room:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .room-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .room-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .room-level {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+        
+        /* Кнопка исследования */
+        .action-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .investigate-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            border: none;
+            padding: 20px;
+            border-radius: 20px;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .investigate-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-icon {
+            font-size: 1.5em;
+        }
+        
+        .btn-reward {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        /* Пассивный доход */
+        .passive-income {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .income-label {
+            opacity: 0.8;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .income-amount {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        /* Навигация */
+        .game-footer {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: auto;
+        }
+        
+        .nav-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 12px 5px;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8em;
+        }
+        
+        .nav-btn.active {
+            background: #3498db;
+        }
+        
+        /* Экран улучшений */
+        .screen-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .upgrades-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .upgrade-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .upgrade-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .upgrade-icon {
+            font-size: 1.5em;
+        }
+        
+        .upgrade-name {
+            font-weight: bold;
+            flex: 1;
+        }
+        
+        .upgrade-level {
+            background: #3498db;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.8em;
+        }
+        
+        .upgrade-description {
+            opacity: 0.8;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .upgrade-cost {
+            color: #f39c12;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        /* Модальное окно */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border-radius: 15px;
+            padding: 0;
+            max-width: 350px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+        
+        .upgrade-info {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .upgrade-icon {
+            font-size: 2.5em;
+        }
+        
+        .upgrade-details {
+            flex: 1;
+        }
+        
+        .upgrade-stats {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+        
+        .buy-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .buy-btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            padding: 12px 16px;
+            border-radius: 8px;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Статистика */
+        .stats-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card h3 {
+            margin-bottom: 10px;
+            color: #3498db;
+            font-size: 1.1em;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9em;
+        }
+        
+        /* Рейтинг */
+        .leaderboard {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .leaderboard-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .leaderboard-rank {
+            background: #f39c12;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        
+        .leaderboard-info {
+            flex: 1;
+        }
+        
+        .leaderboard-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+        }
+        
+        .leaderboard-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Экран загрузки -->
+        <div id="loadingScreen" class="screen">
+            <div class="loading-content">
+                <div class="loader"></div>
+                <h2>Загружаем следственный отдел...</h2>
+                <p>Инициализируем базу данных улик</p>
+            </div>
+        </div>
+
+        <!-- Главный экран -->
+        <div id="mainScreen" class="screen hidden">
+            <header class="game-header">
+                <div class="player-info">
+                    <div class="rank-badge" id="rankBadge">👶 Стажёр</div>
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat-icon">💰</span>
+                            <span id="coinsCount">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-icon">⚡</span>
+                            <span id="energyCount">100</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-icon">📊</span>
+                            <span id="casesCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="game-main">
+                <!-- Карта офиса -->
+                <div class="office-map">
+                    <div class="map-grid">
+                        <div class="room detective-room" data-upgrade="detective">
+                            <div class="room-icon">🕵️</div>
+                            <div class="room-name">Кабинет</div>
+                            <div class="room-level">Ур. <span id="detectiveLevel">0</span></div>
+                        </div>
+                        
+                        <div class="room lab-room" data-upgrade="lab">
+                            <div class="room-icon">🔬</div>
+                            <div class="room-name">Лаборатория</div>
+                            <div class="room-level">Ур. <span id="labLevel">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопка действия -->
+                <div class="action-section">
+                    <button id="investigateBtn" class="investigate-btn">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">Исследовать улики</span>
+                        <span class="btn-reward">+<span id="clickReward">1</span> монет</span>
+                    </button>
+                </div>
+
+                <!-- Пассивный доход -->
+                <div class="passive-income">
+                    <div class="income-label">Пассивный доход:</div>
+                    <div class="income-amount">+<span id="passiveIncome">0</span> монет/мин</div>
+                </div>
+            </main>
+
+            <footer class="game-footer">
+                <div class="nav-buttons">
+                    <button class="nav-btn active" data-screen="main">🏠 Главная</button>
+                    <button class="nav-btn" data-screen="upgrades">⚡ Улучшения</button>
+                    <button class="nav-btn" data-screen="stats">📊 Статистика</button>
+                    <button class="nav-btn" data-screen="leaderboard">🏆 Топ</button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Экран улучшений -->
+        <div id="upgradesScreen" class="screen hidden">
+            <header class="screen-header">
+                <button class="back-btn" data-back="main">← Назад</button>
+                <h2>Улучшения отдела</h2>
+            </header>
+
+            <div class="upgrades-list">
+                <!-- Улучшения будут добавляться через JavaScript -->
+            </div>
+        </div>
+
+        <!-- Экран статистики -->
+        <div id="statsScreen" class="screen hidden">
+            <header class="screen-header">
+                <button class="back-btn" data-back="main">← Назад</button>
+                <h2>Статистика</h2>
+            </header>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h3>Карьера</h3>
+                    <div class="stat-item">
+                        <span>Ранг:</span>
+                        <span id="statRank">Стажёр</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Раскрыто дел:</span>
+                        <span id="statCases">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Всего монет:</span>
+                        <span id="statTotalCoins">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Эффективность</h3>
+                    <div class="stat-item">
+                        <span>Сила клика:</span>
+                        <span id="statClickPower">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Пассивный доход:</span>
+                        <span id="statPassiveIncome">0/мин</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран рейтинга -->
+        <div id="leaderboardScreen" class="screen hidden">
+            <header class="screen-header">
+                <button class="back-btn" data-back="main">← Назад</button>
+                <h2>Топ следователей</h2>
+            </header>
+
+            <div class="leaderboard">
+                <div class="leaderboard-list">
+                    <!-- Рейтинг будет добавляться через JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно улучшения -->
+        <div id="upgradeModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="upgradeName">Улучшение</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="upgrade-info">
+                        <div class="upgrade-icon" id="upgradeIcon">🕵️</div>
+                        <div class="upgrade-details">
+                            <p id="upgradeDescription">Описание улучшения</p>
+                            <div class="upgrade-stats">
+                                <div>Текущий уровень: <span id="currentLevel">0</span></div>
+                                <div>Доход: +<span id="upgradeIncome">0</span>/мин</div>
+                                <div>Стоимость: <span id="upgradeCost">0</span> монет</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="buyUpgradeBtn" class="buy-btn">Купить улучшение</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Уведомления -->
+        <div id="notification" class="notification hidden">
+            <span id="notificationText"></span>
+        </div>
+    </div>
+
+    <script>
+        // Упрощенная версия игры - все в одном файле для надежности
+        class SledGame {
+            constructor() {
+                this.coins = 100;
+                this.energy = 100;
+                this.casesSolved = 0;
+                this.rank = 'Стажёр';
+                this.clickPower = 1;
+                this.passiveIncome = 0;
+                this.totalEarned = 0;
+                this.totalClicks = 0;
+                
+                this.upgrades = {
+                    detective: { level: 0, baseCost: 100, income: 1 },
+                    lab: { level: 0, baseCost: 500, income: 5 }
+                };
+                
+                this.ranks = {
+                    'Стажёр': { 
+                        clickPower: 1, 
+                        emoji: '👶',
+                        upgradeCost: 1000,
+                        casesRequired: 100
+                    },
+                    'Следователь': { 
+                        clickPower: 30, 
+                        emoji: '🕵️',
+                        upgradeCost: 10000,
+                        casesRequired: 1000
+                    },
+                    'Следователь по особо важным делам': { 
+                        clickPower: 50, 
+                        emoji: '⭐',
+                        upgradeCost: 0,
+                        casesRequired: 0
+                    }
+                };
+                
+                this.players = [];
+                
+                this.init();
+            }
+            
+            init() {
+                console.log('Инициализация игры...');
+                this.loadGame();
+                this.setupEventListeners();
+                this.calculatePassiveIncome();
+                this.updateUI();
+                this.hideLoadingScreen();
+                
+                // Пассивный доход каждую минуту
+                setInterval(() => {
+                    this.addPassiveIncome();
+                }, 60000);
+                
+                // Восстановление энергии: 1 энергия за 30 секунд
+                setInterval(() => {
+                    this.regenEnergy();
+                }, 30000);
+                
+                console.log('Игра успешно инициализирована');
+            }
+            
+            setupEventListeners() {
+                // Кнопка исследования
+                document.getElementById('investigateBtn').addEventListener('click', () => {
+                    this.investigate();
+                });
+                
+                // Комнаты офиса
+                document.querySelectorAll('.room').forEach(room => {
+                    room.addEventListener('click', (e) => {
+                        const upgradeId = e.currentTarget.dataset.upgrade;
+                        this.showUpgradeModal(upgradeId);
+                    });
+                });
+                
+                // Навигация
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const screen = e.currentTarget.dataset.screen;
+                        this.showScreen(screen);
+                    });
+                });
+                
+                // Кнопки назад
+                document.querySelectorAll('.back-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const screen = e.currentTarget.dataset.back;
+                        this.showScreen(screen);
+                    });
+                });
+                
+                // Закрытие модального окна
+                document.querySelector('.close-btn').addEventListener('click', () => {
+                    this.hideUpgradeModal();
+                });
+                
+                // Клик по фону модального окна
+                document.getElementById('upgradeModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'upgradeModal') {
+                        this.hideUpgradeModal();
+                    }
+                });
+                
+                // Кнопка покупки улучшения
+                document.getElementById('buyUpgradeBtn').addEventListener('click', () => {
+                    this.buyUpgrade(this.currentUpgrade);
+                });
+            }
+            
+            investigate() {
+                if (this.energy <= 0) {
+                    this.showNotification('❌ Закончилась энергия! Подождите 30 секунд для восстановления.');
+                    return;
+                }
+                
+                // Добавляем монеты
+                this.coins += this.clickPower;
+                this.totalEarned += this.clickPower;
+                this.energy -= 1;
+                this.totalClicks += 1;
+                
+                // Каждые 10 кликов добавляем дело
+                if (this.totalClicks % 10 === 0) {
+                    this.casesSolved += 1;
+                    this.showNotification('🎉 Раскрыто дело! +1 к раскрытым делам');
+                    this.checkRankUp();
+                }
+                
+                // Сохраняем игру
+                this.saveGame();
+                this.updateUI();
+                
+                // Анимация клика
+                this.animateClick();
+            }
+            
+            animateClick() {
+                const btn = document.getElementById('investigateBtn');
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                }, 100);
+            }
+            
+            addPassiveIncome() {
+                const income = this.passiveIncome;
+                if (income > 0) {
+                    this.coins += income;
+                    this.totalEarned += income;
+                    this.saveGame();
+                    this.updateUI();
+                    this.showNotification(`💤 Пассивный доход: +${income} монет`);
+                }
+            }
+            
+            regenEnergy() {
+                if (this.energy < 100) {
+                    this.energy = Math.min(this.energy + 1, 100);
+                    this.saveGame();
+                    this.updateUI();
+                }
+            }
+            
+            calculatePassiveIncome() {
+                this.passiveIncome = 0;
+                for (const upgradeId in this.upgrades) {
+                    const upgrade = this.upgrades[upgradeId];
+                    this.passiveIncome += upgrade.level * upgrade.income;
+                }
+            }
+            
+            showUpgradeModal(upgradeId) {
+                const upgrade = this.upgrades[upgradeId];
+                const upgradeData = this.getUpgradeData(upgradeId);
+                
+                document.getElementById('upgradeName').textContent = upgradeData.name;
+                document.getElementById('upgradeIcon').textContent = upgradeData.emoji;
+                document.getElementById('upgradeDescription').textContent = upgradeData.description;
+                document.getElementById('currentLevel').textContent = upgrade.level;
+                document.getElementById('upgradeIncome').textContent = upgrade.level * upgrade.income;
+                document.getElementById('upgradeCost').textContent = this.getUpgradeCost(upgradeId);
+                
+                const buyBtn = document.getElementById('buyUpgradeBtn');
+                const cost = this.getUpgradeCost(upgradeId);
+                
+                if (this.coins >= cost) {
+                    buyBtn.disabled = false;
+                    buyBtn.textContent = `Купить за ${cost} монет`;
+                } else {
+                    buyBtn.disabled = true;
+                    buyBtn.textContent = 'Недостаточно монет';
+                }
+                
+                this.currentUpgrade = upgradeId;
+                document.getElementById('upgradeModal').classList.remove('hidden');
+            }
+            
+            hideUpgradeModal() {
+                document.getElementById('upgradeModal').classList.add('hidden');
+            }
+            
+            buyUpgrade(upgradeId) {
+                const cost = this.getUpgradeCost(upgradeId);
+                
+                if (this.coins >= cost) {
+                    this.coins -= cost;
+                    this.upgrades[upgradeId].level++;
+                    this.calculatePassiveIncome();
+                    
+                    this.saveGame();
+                    this.updateUI();
+                    this.hideUpgradeModal();
+                    
+                    this.showNotification(`✅ Улучшение куплено!`);
+                }
+            }
+            
+            getUpgradeCost(upgradeId) {
+                const upgrade = this.upgrades[upgradeId];
+                return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
+            }
+            
+            getUpgradeData(upgradeId) {
+                const data = {
+                    detective: {
+                        name: 'Детектив',
+                        emoji: '🕵️',
+                        description: 'Базовый следователь для расследования простых дел'
+                    },
+                    lab: {
+                        name: 'Лаборатория',
+                        emoji: '🔬',
+                        description: 'Современное оборудование для анализа улик'
+                    }
+                };
+                
+                return data[upgradeId];
+            }
+            
+            checkRankUp() {
+                for (const [rankName, rankData] of Object.entries(this.ranks)) {
+                    if (this.casesSolved >= rankData.casesRequired) {
+                        if (this.getRankLevel(rankName) > this.getRankLevel(this.rank)) {
+                            this.rank = rankName;
+                            this.clickPower = rankData.clickPower;
+                            this.showNotification(`🎉 Повышение! Новый ранг: ${rankName} ${rankData.emoji}`);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            getRankLevel(rankName) {
+                const ranks = Object.keys(this.ranks);
+                return ranks.indexOf(rankName);
+            }
+            
+            showScreen(screenName) {
+                // Скрываем все экраны
+                document.querySelectorAll('.screen').forEach(screen => {
+                    screen.classList.add('hidden');
+                });
+                
+                // Показываем нужный экран
+                document.getElementById(screenName + 'Screen').classList.remove('hidden');
+                
+                // Обновляем активную кнопку навигации
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-screen="${screenName}"]`).classList.add('active');
+                
+                // Обновляем контент экрана если нужно
+                if (screenName === 'upgrades') {
+                    this.renderUpgradesScreen();
+                } else if (screenName === 'stats') {
+                    this.renderStatsScreen();
+                } else if (screenName === 'leaderboard') {
+                    this.renderLeaderboardScreen();
+                }
+            }
+            
+            renderUpgradesScreen() {
+                const container = document.querySelector('.upgrades-list');
+                container.innerHTML = '';
+                
+                for (const upgradeId in this.upgrades) {
+                    const upgrade = this.upgrades[upgradeId];
+                    const upgradeData = this.getUpgradeData(upgradeId);
+                    const cost = this.getUpgradeCost(upgradeId);
+                    
+                    const element = document.createElement('div');
+                    element.className = 'upgrade-item';
+                    element.innerHTML = `
+                        <div class="upgrade-header">
+                            <div class="upgrade-icon">${upgradeData.emoji}</div>
+                            <div class="upgrade-name">${upgradeData.name}</div>
+                            <div class="upgrade-level">Ур. ${upgrade.level}</div>
+                        </div>
+                        <div class="upgrade-description">${upgradeData.description}</div>
+                        <div class="upgrade-cost">Стоимость: ${cost} монет</div>
+                        <div>Доход: +${upgrade.level * upgrade.income}/мин</div>
+                    `;
+                    
+                    element.addEventListener('click', () => {
+                        this.showUpgradeModal(upgradeId);
+                    });
+                    
+                    container.appendChild(element);
+                }
+            }
+            
+            renderStatsScreen() {
+                document.getElementById('statRank').textContent = this.rank + ' ' + this.ranks[this.rank].emoji;
+                document.getElementById('statCases').textContent = Math.floor(this.casesSolved);
+                document.getElementById('statTotalCoins').textContent = this.totalEarned;
+                document.getElementById('statClickPower').textContent = this.clickPower;
+                document.getElementById('statPassiveIncome').textContent = this.passiveIncome + '/мин';
+            }
+            
+            renderLeaderboardScreen() {
+                this.updatePlayerInLeaderboard();
+                const container = document.querySelector('.leaderboard-list');
+                container.innerHTML = '';
+                
+                // Сортируем игроков по монетам
+                const sortedPlayers = this.players.sort((a, b) => b.coins - a.coins);
+                
+                sortedPlayers.forEach((player, index) => {
+                    const element = document.createElement('div');
+                    element.className = 'leaderboard-item';
+                    
+                    let rankIcon = '🥇';
+                    if (index === 1) rankIcon = '🥈';
+                    if (index === 2) rankIcon = '🥉';
+                    if (index > 2) rankIcon = '🔹';
+                    
+                    element.innerHTML = `
+                        <div class="leaderboard-rank">${rankIcon}</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-name">${player.name}</div>
+                            <div class="leaderboard-stats">
+                                <span>💰 ${player.coins} монет</span>
+                                <span>📊 ${player.casesSolved} дел</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (player.isCurrentPlayer) {
+                        element.style.background = 'rgba(52, 152, 219, 0.3)';
+                    }
+                    
+                    container.appendChild(element);
+                });
+            }
+            
+            updatePlayerInLeaderboard() {
+                const playerData = {
+                    name: this.getPlayerName(),
+                    coins: this.coins,
+                    casesSolved: Math.floor(this.casesSolved),
+                    isCurrentPlayer: true
+                };
+                
+                // Находим игрока в списке или добавляем нового
+                const existingIndex = this.players.findIndex(p => p.name === playerData.name);
+                if (existingIndex !== -1) {
+                    this.players[existingIndex] = playerData;
+                } else {
+                    this.players.push(playerData);
+                }
+                
+                this.savePlayers();
+            }
+            
+            getPlayerName() {
+                // Пытаемся получить имя из Telegram Web App
+                if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                    const user = Telegram.WebApp.initDataUnsafe.user;
+                    return user.first_name || user.username || 'Аноним';
+                }
+                return 'Игрок';
+            }
+            
+            updateUI() {
+                // Основные показатели
+                document.getElementById('coinsCount').textContent = Math.floor(this.coins);
+                document.getElementById('energyCount').textContent = Math.floor(this.energy);
+                document.getElementById('casesCount').textContent = Math.floor(this.casesSolved);
+                
+                // Ранг
+                document.getElementById('rankBadge').textContent = 
+                    this.ranks[this.rank].emoji + ' ' + this.rank;
+                
+                // Уровни улучшений
+                document.getElementById('detectiveLevel').textContent = this.upgrades.detective.level;
+                document.getElementById('labLevel').textContent = this.upgrades.lab.level;
+                
+                // Награда за клик
+                document.getElementById('clickReward').textContent = this.clickPower;
+                
+                // Пассивный доход
+                document.getElementById('passiveIncome').textContent = this.passiveIncome;
+            }
+            
+            showNotification(message) {
+                const notification = document.getElementById('notification');
+                const text = document.getElementById('notificationText');
+                
+                text.textContent = message;
+                notification.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 3000);
+            }
+            
+            hideLoadingScreen() {
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('mainScreen').classList.remove('hidden');
+                    this.showNotification('🎮 Игра загружена! Начните расследование.');
+                }, 2000);
+            }
+            
+            saveGame() {
+                const gameData = {
+                    coins: this.coins,
+                    energy: this.energy,
+                    casesSolved: this.casesSolved,
+                    rank: this.rank,
+                    upgrades: this.upgrades,
+                    totalEarned: this.totalEarned,
+                    totalClicks: this.totalClicks,
+                    clickPower: this.clickPower
+                };
+                
+                localStorage.setItem('sledGame', JSON.stringify(gameData));
+            }
+            
+            loadGame() {
+                const saved = localStorage.getItem('sledGame');
+                if (saved) {
+                    try {
+                        const gameData = JSON.parse(saved);
+                        
+                        this.coins = gameData.coins || 100;
+                        this.energy = gameData.energy || 100;
+                        this.casesSolved = gameData.casesSolved || 0;
+                        this.rank = gameData.rank || 'Стажёр';
+                        this.upgrades = gameData.upgrades || this.upgrades;
+                        this.totalEarned = gameData.totalEarned || 0;
+                        this.totalClicks = gameData.totalClicks || 0;
+                        this.clickPower = gameData.clickPower || this.ranks[this.rank].clickPower;
+                        
+                        this.calculatePassiveIncome();
+                    } catch (e) {
+                        console.error('Ошибка загрузки игры:', e);
+                    }
+                }
+            }
+            
+            loadPlayers() {
+                const saved = localStorage.getItem('sledGamePlayers');
+                return saved ? JSON.parse(saved) : [];
+            }
+            
+            savePlayers() {
+                localStorage.setItem('sledGamePlayers', JSON.stringify(this.players));
+            }
+        }
+
+        // Инициализация игры когда страница загружена
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                window.game = new SledGame();
+                
+                // Инициализация Telegram Web App
+                if (window.Telegram && Telegram.WebApp) {
+                    Telegram.WebApp.ready();
+                    Telegram.WebApp.expand();
+                    console.log('Telegram Web App initialized');
+                }
+            } catch (error) {
+                console.error('Ошибка при создании игры:', error);
+                // Показываем ошибку пользователю
+                document.getElementById('loadingScreen').innerHTML = 
+                    '<div class="loading-content"><h2>Ошибка загрузки</h2><p>Попробуйте обновить страницу</p></div>';
+            }
+        });
+    </script>
+</body>
+</html>
